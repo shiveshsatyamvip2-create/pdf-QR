@@ -1,30 +1,33 @@
 const express = require('express');
 const multer = require('multer');
-const { createClient } = require('@supabase/supabase-js'); // New: Supabase client
+const { createClient } = require('@supabase/supabase-js');
 const { PDFDocument } = require('pdf-lib');
 const qrcode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 
-// --- ⚠️ Configuration - FILL THESE IN (from Step 2 below) ---
+// --- Configuration ---
 const PORT = process.env.PORT || 3000;
-const SUPABASE_URL = 'https://rnssvmliwgdyomonxkcu.supabase.co'; // ⚠️ e.g., https://[id].supabase.co
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuc3N2bWxpd2dkeW9tb254a2N1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzIxODEzNywiZXhwIjoyMDc4Nzk0MTM3fQ.1xoRbfUecWW6huV6DkZUChCOYkDfG18Xw8juPP1KUdo'; // ⚠️ The secret "service_role" key
-const BUCKET_NAME = 'pdf_files'; // ⚠️ The name of the bucket you will create in Supabase
+const SUPABASE_URL = 'https://rnssvmliwgdyomonxkcu.supabase.co';
+const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuc3N2bWxpd2dkeW9tb254a2N1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzIxODEzNywiZXhwIjoyMDc4Nzk0MTM3fQ.1xoRbfUecWW6huV6DkZUChCOYkDfG18Xw8juPP1KUdo';
+const BUCKET_NAME = 'pdf_files';
 
 // --- Initialize Supabase Admin ---
-// We use the service_role key here for admin-level access to upload files.
-// This key must be kept secret and *only* used on a server.
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // --- Initialize Express ---
 const app = express();
-app.use(cors()); // Allow requests from your frontend
+app.use(cors());
 
 // --- Configure Multer for in-memory file storage ---
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB file limit
+    limits: { fileSize: 10 * 1024 * 1024 },
+});
+
+// --- Root Route - Show Server Status ---
+app.get('/', (req, res) => {
+    res.status(200).send('Server is running');
 });
 
 // --- The Main Upload Endpoint ---
@@ -41,10 +44,9 @@ app.post('/upload', upload.single('pdf'), async (req, res) => {
 
         // 1. Generate unique file names and paths
         const fileId = uuidv4();
-        const filePath = `processed/${fileId}.pdf`; // Path inside the Supabase bucket
+        const filePath = `processed/${fileId}.pdf`;
 
         // 2. Get the public URL *before* uploading
-        // This is the URL the QR code will point to.
         const { data: publicUrlData } = supabase
             .storage
             .from(BUCKET_NAME)
@@ -54,7 +56,7 @@ app.post('/upload', upload.single('pdf'), async (req, res) => {
 
         console.log(`Generating QR code for: ${publicUrl}`);
 
-        // 3. Generate QR code (both as a buffer for embedding and data URL for frontend)
+        // 3. Generate QR code
         const qrCodeBuffer = await qrcode.toBuffer(publicUrl);
         const qrCodeDataUrl = await qrcode.toDataURL(publicUrl);
 
@@ -91,11 +93,10 @@ app.post('/upload', upload.single('pdf'), async (req, res) => {
             .from(BUCKET_NAME)
             .upload(filePath, modifiedPdfBytes, {
                 contentType: 'application/pdf',
-                upsert: false // Don't overwrite existing files
+                upsert: false
             });
 
         if (uploadError) {
-            // If the upload fails, throw the error to be caught by the catch block
             throw uploadError;
         }
 
@@ -104,7 +105,7 @@ app.post('/upload', upload.single('pdf'), async (req, res) => {
         // 8. Send the public URL and QR data back to the frontend
         res.status(200).json({
             downloadUrl: publicUrl,
-            qrCodeDataUrl: qrCodeDataUrl,
+            qrCodeDataUrl: qrCodeDataDataUrl,
         });
 
     } catch (error) {

@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedFile = null;
     
     // --- Backend API URL ---
-    const API_URL = 'http://localhost:3000/upload'; 
+    const API_URL = 'https://pdf-stamper-backend.onrender.com'; 
 
     // --- Functions to change UI states (FIXED LOGIC) ---
     function showUploader() {
@@ -172,5 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // No need for the extra showUploader() at the end,
     // because the CSS now handles the default state.
+
 
 });
